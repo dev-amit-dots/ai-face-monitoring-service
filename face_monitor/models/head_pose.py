@@ -37,11 +37,10 @@ class HeadPoseEstimator:
         self._cascade = None
         if hasattr(mp, "solutions"):
             self._mesh = mp.solutions.face_mesh.FaceMesh(
-                static_image_mode=False,
+                static_image_mode=True,
                 max_num_faces=1,
                 refine_landmarks=True,
                 min_detection_confidence=0.5,
-                min_tracking_confidence=0.5,
             )
         else:
             cascade_path = Path(cv2.data.haarcascades) / "haarcascade_frontalface_default.xml"
