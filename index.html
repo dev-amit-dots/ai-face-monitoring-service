@@ -349,6 +349,7 @@
         function showPopup(status, message) {
             let icon = '⚠️';
             if (status === 'FACE_MISSING') icon = '👤❓';
+            else if (status === 'USER_NOT_FOUND') icon = '🚫👤';
             else if (status === 'MULTIPLE_FACES') icon = '👥';
             else if (status === 'UNKNOWN_PERSON') icon = '🚷';
             else if (status === 'LOOKING_AWAY') icon = '👀';
