@@ -11,6 +11,7 @@ from face_monitor.models.camera_validation import CameraValidator
 from face_monitor.models.face_detector import FaceDetector
 from face_monitor.models.face_recognition import FaceRecognizer
 from face_monitor.models.head_pose import HeadPoseEstimator
+from face_monitor.models.person_detector import PersonDetector
 from face_monitor.session_manager import SessionState
 
 
@@ -35,6 +36,7 @@ class FrameProcessor:
         self._face_detector = FaceDetector(settings.face_detection_confidence)
         self._recognizer = FaceRecognizer(settings.face_match_tolerance)
         self._head_pose = HeadPoseEstimator()
+        self._person_detector = PersonDetector()
         self._anti_spoof = AntiSpoofDetector(
             settings.spoof_model_path, settings.spoof_score_threshold
         )
@@ -50,8 +52,24 @@ class FrameProcessor:
 
         faces = self._face_detector.detect(frame_bgr)
         if not faces:
-            session.away_started_at = None
-            return self._remember(session, "FACE_MISSING", "No face detected")
+            if self._person_detector.detect(frame_bgr):
+                session.away_started_at = None
+                return self._remember(
+                    session, 
+                    "FACE_PRESENT", 
+                    "User is writing notes or face not visible"
+                )
+            
+            if session.away_started_at is None:
+                session.away_started_at = now
+            if now - session.away_started_at >= self._settings.looking_away_seconds:
+                return self._remember(session, "USER_NOT_FOUND", "User not found")
+            else:
+                return self._remember(
+                    session,
+                    "FACE_PRESENT",
+                    "User temporarily not visible"
+                )
         if len(faces) > 1:
             session.away_started_at = None
             return self._remember(
@@ -70,10 +88,10 @@ class FrameProcessor:
         if embedding is None:
             return self._remember(session, "ERROR", "Unable to create face embedding")
 
+        # The user requested to disable face matching against the registered user
+        # so we just record the embedding if needed but do not fail on mismatch.
         if session.registered_embedding is None:
             session.registered_embedding = embedding
-        elif not self._recognizer.is_match(session.registered_embedding, embedding):
-            return self._remember(session, "UNKNOWN_PERSON", "Face does not match session user")
 
         pose = self._head_pose.estimate(frame_bgr)
         if pose in {"left", "right", "down"}:
