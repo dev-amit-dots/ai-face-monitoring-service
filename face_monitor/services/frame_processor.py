@@ -45,10 +45,10 @@ class FrameProcessor:
         now = time.time()
 
         if self._camera.is_blocked(frame_bgr):
-            return self._remember(session, "CAMERA_BLOCKED", "Camera appears blocked")
+            return self._remember(session, "NOT_FOUND", "Camera appears blocked")
 
         if self._camera.is_frozen(session, frame_bgr, now):
-            return self._remember(session, "CAMERA_FROZEN", "Camera frame is frozen")
+            return self._remember(session, "NOT_FOUND", "Camera frame is frozen")
 
         faces = self._face_detector.detect(frame_bgr)
         if not faces:
@@ -63,18 +63,19 @@ class FrameProcessor:
             if session.away_started_at is None:
                 session.away_started_at = now
             if now - session.away_started_at >= self._settings.looking_away_seconds:
-                return self._remember(session, "USER_NOT_FOUND", "User not found")
+                return self._remember(session, "NOT_FOUND", "User not found")
             else:
                 return self._remember(
                     session,
                     "FACE_PRESENT",
                     "User temporarily not visible"
                 )
+        
         if len(faces) > 1:
             session.away_started_at = None
             return self._remember(
                 session,
-                "MULTIPLE_FACES",
+                "NOT_FOUND",
                 "Multiple faces detected",
                 face_count=len(faces),
             )
@@ -82,11 +83,11 @@ class FrameProcessor:
         face = faces[0]
 
         if self._anti_spoof.is_spoof(frame_bgr):
-            return self._remember(session, "SPOOF_DETECTED", "Potential spoof detected")
+            return self._remember(session, "NOT_FOUND", "Potential spoof detected")
 
         embedding = self._recognizer.embedding(frame_bgr, face)
         if embedding is None:
-            return self._remember(session, "ERROR", "Unable to create face embedding")
+            return self._remember(session, "NOT_FOUND", "Unable to create face embedding")
 
         # The user requested to disable face matching against the registered user
         # so we just record the embedding if needed but do not fail on mismatch.
@@ -94,18 +95,8 @@ class FrameProcessor:
             session.registered_embedding = embedding
 
         pose = self._head_pose.estimate(frame_bgr)
-        if pose in {"left", "right", "down"}:
-            if session.away_started_at is None:
-                session.away_started_at = now
-            if now - session.away_started_at >= self._settings.looking_away_seconds:
-                return self._remember(
-                    session,
-                    "LOOKING_AWAY",
-                    "User is looking away from the screen",
-                    head_pose=pose,
-                )
-        else:
-            session.away_started_at = None
+        # Face is present whether looking at camera or not
+        session.away_started_at = None
 
         return self._remember(
             session,
