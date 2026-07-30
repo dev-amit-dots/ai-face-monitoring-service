@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     )
 
     face_detection_confidence: float = Field(
-        default=0.6, alias="FACE_DETECTION_CONFIDENCE", ge=0.0, le=1.0
+        default=0.4, alias="FACE_DETECTION_CONFIDENCE", ge=0.0, le=1.0
     )
     face_match_tolerance: float = Field(
         default=0.55, alias="FACE_MATCH_TOLERANCE", ge=0.0, le=2.0
