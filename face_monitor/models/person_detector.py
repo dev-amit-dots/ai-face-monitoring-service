@@ -18,7 +18,7 @@ class PersonDetector:
             self._pose = mp.solutions.pose.Pose(
                 static_image_mode=False,
                 model_complexity=0, # Use fastest model
-                min_detection_confidence=0.4,
+                min_detection_confidence=0.2,
             )
         else:
             # Fallback if mediapipe solutions is somehow not available

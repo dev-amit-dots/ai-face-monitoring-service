@@ -75,15 +75,15 @@ class FrameProcessor:
             session.away_started_at = None
             return self._remember(
                 session,
-                "NOT_FOUND",
-                "Multiple faces detected",
+                "FACE_PRESENT",
+                "Multiple faces detected, but allowed",
                 face_count=len(faces),
             )
 
         face = faces[0]
 
-        if self._anti_spoof.is_spoof(frame_bgr):
-            return self._remember(session, "NOT_FOUND", "Potential spoof detected")
+        # if self._anti_spoof.is_spoof(frame_bgr):
+        #     return self._remember(session, "NOT_FOUND", "Potential spoof detected")
 
         embedding = self._recognizer.embedding(frame_bgr, face)
         if embedding is None:
