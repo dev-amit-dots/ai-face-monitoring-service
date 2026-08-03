@@ -29,6 +29,9 @@ class MonitoringService:
         try:
             frame_payload = FramePayload.model_validate(payload)
             frame = decode_base64_image(frame_payload.image)
+            import cv2
+            cv2.imwrite("debug_frame.jpg", frame)
+            
             session = await self._sessions.get_or_create(
                 frame_payload.session_id, frame_payload.user_id
             )
