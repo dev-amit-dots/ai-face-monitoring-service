@@ -52,6 +52,22 @@ class FrameProcessor:
 
         faces = self._face_detector.detect(frame_bgr)
         if not faces:
+            # Attempt to maintain existing valid track
+            last_face_box = session.metadata.get("last_face_box")
+            last_face_embedding = session.metadata.get("last_face_embedding")
+            if last_face_box is not None and last_face_embedding is not None:
+                embedding = self._recognizer.embedding(frame_bgr, last_face_box)
+                if embedding is not None and self._recognizer.is_match(
+                    last_face_embedding, embedding
+                ):
+                    session.away_started_at = None
+                    return self._remember(
+                        session,
+                        "FACE_PRESENT",
+                        "Face maintained via tracking",
+                        face_count=1,
+                    )
+
             if self._person_detector.detect(frame_bgr):
                 session.away_started_at = None
                 return self._remember(
@@ -82,12 +98,13 @@ class FrameProcessor:
 
         face = faces[0]
 
-        # if self._anti_spoof.is_spoof(frame_bgr):
-        #     return self._remember(session, "NOT_FOUND", "Potential spoof detected")
-
         embedding = self._recognizer.embedding(frame_bgr, face)
         if embedding is None:
             return self._remember(session, "NOT_FOUND", "Unable to create face embedding")
+
+        # Save track metadata
+        session.metadata["last_face_box"] = face
+        session.metadata["last_face_embedding"] = embedding
 
         # The user requested to disable face matching against the registered user
         # so we just record the embedding if needed but do not fail on mismatch.

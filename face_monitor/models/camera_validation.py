@@ -35,14 +35,31 @@ class CameraValidator:
         if session.last_frame_gray is None:
             session.last_frame_gray = gray
             session.freeze_started_at = None
+            session.metadata["frozen_reference_frame"] = gray
             return False
-
-        difference = float(np.mean(cv2.absdiff(gray, session.last_frame_gray)))
+        abs_diff = cv2.absdiff(gray, session.last_frame_gray)
+        difference = float(np.mean(abs_diff))
+        max_diff = float(np.max(abs_diff))
         session.last_frame_gray = gray
 
-        if difference <= self._freeze_difference_threshold:
+        # A truly frozen camera feed (software crash/spoof) will have virtually identical frames (difference ~ 0).
+        # A stationary user with a good webcam might have a mean difference of 0.5 - 2.5 due to sensor noise.
+        # We enforce a strict threshold (<= 0.2 mean, <= 1.0 max) to ensure we NEVER falsely flag a live, stationary user.
+        if difference <= 0.2 and max_diff <= 1.0:
             if session.freeze_started_at is None:
                 session.freeze_started_at = now
+                session.metadata["frozen_reference_frame"] = gray
+            else:
+                ref_gray = session.metadata.get("frozen_reference_frame")
+                if ref_gray is not None:
+                    ref_diff = cv2.absdiff(gray, ref_gray)
+                    ref_mean = float(np.mean(ref_diff))
+                    ref_max = float(np.max(ref_diff))
+                    # If over time they move enough (e.g. blink, breathe), max diff spikes
+                    if ref_mean > self._freeze_difference_threshold or ref_max > 15.0:
+                        session.freeze_started_at = None
+                        return False
+
             return now - session.freeze_started_at >= self._freeze_seconds
 
         session.freeze_started_at = None
