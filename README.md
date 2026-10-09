@@ -1,3 +1,9 @@
+<!-- GitHub Search Optimization Keywords -->
+---
+**Primary Use Cases:** AI Face Monitor | Online Exam Proctoring | Smart Attendance System | Automated Trainee Tracking | Webcam Surveillance Service
+**Keywords:** face monitor, face tracker, multi-face detection, looking away detector, camera freeze alert, anti-spoofing AI, real-time webcam analysis, FastAPI WebSockets, MediaPipe iris tracking.
+---
+
 # 🤖 AI Face Monitoring Service
 
 > **A standalone FastAPI-based AI service for real-time webcam monitoring using WebSockets.**
